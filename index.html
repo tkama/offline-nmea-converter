@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="ja-jp">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+    <title>Offline NMEA Converter v0.001 </title>
+</head>
+
+<body>
+    <div class="jumbotron">
+        <h3 class="display-4">Offline NMEA Converter</h3>
+        <div>サーバにデータを送信しない安全なNEMAデータ変換ツール</div>
+        <hr />
+        <div id="drop_zone" class="alert alert-light text-center" role="alert">
+            <h5>Drop NMEA file here</h5>
+            <br>こちらにNEMA形式のファイルをドロップして下さい
+        </div>
+    </div>
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <div class="container w-100">
+        <div id="list" style="display:none">
+            <div class="card w-100">
+                <h6 class="card-header">分析結果</h6>
+                <div class="card-block" style="padding:6px;">
+                    <h6 class="card-title" id="filename"></h6>
+                    <p class="card-text" id="filetimestamp"></p>
+                    <div id="FileReadStatus">
+                    </div>
+                    <div class="card-futter">
+                        <a id="gpx" href="#" download=" now_filename .gpx" class="btn btn-info" onclick="downloadGPX()"> GPX download </a>
+                        <a id="csv" href="#" download=" now_filename .csv" class="btn btn-primary" onclick="downloadCSV()"> CSV download </a>
+                        <a id="kml" href="#" download=" now_filename .kml" class="btn btn-secondary" onclick="downloadKML()"> KML download </a>
+                    </div>
+                    <div>
+                    </div>
+                </div>
+            </div>
+            <script>
+                function handleFileSelect(evt) {
+                    evt.stopPropagation();
+                    evt.preventDefault();
+
+                    var files = evt.dataTransfer.files; // FileList object.
+
+                    // files is a FileList of File objects. List some properties.
+                    var output = [];
+                    for (var i = 0, f; f = files[i]; i++) {
+                        var a = readNema(f, i); //注意非同期処理
+
+                        $('#filename').html("ファイル名 : " + now_filename + ".NEMA");
+                        //$('#list').html(output.join(''));
+                        $('#filetimestamp').html("作成日 : " + f.lastModifiedDate.toLocaleDateString() +
+                            " " + f.lastModifiedDate.toLocaleTimeString());
+
+                    }
+                }
+
+                function handleDragOver(evt) {
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    evt.dataTransfer.dropEffect = "Copy"; // Explicitly show this is a copy.
+                }
+
+
+                var now_filename = "gps";
+                var ans;
+                // Setup the dnd listeners.
+                var dropZone = document.getElementById('drop_zone');
+                dropZone.addEventListener('dragover', handleDragOver, false);
+                dropZone.addEventListener('drop', handleFileSelect, false);
+
+
+                let anshtml = new Array();
+                var counter = {
+                    "gprmc": 0,
+                    "gpgga": 0
+                };
+
+                function readNema(file, id) {
+                    $('#list').show();
+                    ans = new Array();
+
+                    var extention_str = (escape(file.name).split('.', 2))[1];
+                    now_filename = (escape(file.name).split('.', 1))[0];
+                    if (extention_str == 'NMEA') {
+                        //FileReaderの作成
+                        var reader = new FileReader();
+                        //テキスト形式で読み込む
+                        reader.readAsText(file);
+
+                        //読込終了後の処理
+                        reader.onload = function(ev) {
+                            var line = reader.result.split('\r\n');
+                            var gprmc_ts;
+                            for (var i = 0; i < line.length; i++) {
+
+                                switch (line[i].substr(1, 5)) {
+                                    case 'GPRMC':
+                                        counter.gprmc++;
+                                        var gprmc = readGPRMC(line[i]);
+                                        if (ans[gprmc.ts] === undefined) {
+                                            ans[gprmc.ts] = {};
+                                        };
+                                        ans[gprmc.ts].gprmc = gprmc;
+                                        gprmc_ts = gprmc.ts;
+                                        break;
+                                    case 'GPGGA':
+                                        counter.gpgga++;
+                                        var gpgga = readGPGGA(line[i]);
+                                        if (ans[gpgga.ts] === undefined) {
+                                            break;
+                                            // ans[gpgga.ts] = {};
+                                        };
+
+                                        if (gpgga != -1) {
+                                            ans[gpgga.ts].gpgga = gpgga;
+                                        } else {
+                                            // delete ans[gprmc_ts].gprmc;
+                                        }
+                                        //console.log(ans);
+                                        break;
+                                }
+                            }
+                            console.log(ans);
+                            //console.log(ans);
+                            $('#FileReadStatus').html("<div> GPGGA : " + counter.gpgga + " 行 </div><div>" +
+                                "<div> GPRMC : " + counter.gprmc + " 行 </div><div>");
+
+                        }
+                    }
+                    return counter;
+                }
+                var now_ts = {};
+
+                function readGPRMC(gprmc) {
+                    var gprmc_ans = {};
+                    var data = gprmc.split(',', 13);
+                    //get timestamp
+                    gprmc_ans.ts = new Date("20" + data[9].substr(4, 2), data[9].substr(2, 2), data[9].substr(0, 2), data[1].substr(0, 2), data[1].substr(2, 2), data[1].substr(4, 2), data[1].substr(7, 3));
+                    now_ts.ts_string = data[1];
+                    now_ts.ts = gprmc_ans.ts;
+                    //get gps_status
+                    gprmc_ans.gps_status = data[2];
+                    //get lat
+                    var lat = Math.floor(data[3] / 100) + (data[3] % 100) / 60;
+                    if (data[4] == 'N') {
+                        gprmc_ans.lat = lat;
+                    } else if (data[4] == 'South') {
+                        gprmc_ans.lat = lat * -1;
+                    }
+                    //get lon
+                    var lon = Math.floor(data[5] / 100) + (data[5] % 100) / 60;
+                    if (data[6] == 'E') {
+                        gprmc_ans.lon = lon;
+                    } else if (data[6] == 'West') {
+                        gprmc_ans.lon = lon * -1;
+                    }
+                    //get km_speed
+                    gprmc_ans.km_speed = data[7] * 1.8519999983999;
+                    return gprmc_ans;
+                }
+
+                function readGPGGA(gpgga) {
+
+                    var gpgga_ans = {};
+                    var data = gpgga.split(',', 15);
+                    //get timestamp
+                    if (now_ts.ts_string == data[1]) {
+                        gpgga_ans.ts = now_ts.ts;
+                    } else {
+                        console.log("ピンチでござる");
+                        return -1;
+                    }
+
+                    //get lat
+                    var lat = Math.floor(data[2] / 100) + (data[2] % 100) / 60;
+                    if (data[3] == 'N') {
+                        gpgga_ans.lat = lat;
+                    } else if (data[3] == 'South') {
+                        gpgga_ans.lat = lat * -1;
+                    }
+                    //get lon
+                    var lon = Math.floor(data[4] / 100) + (data[4] % 100) / 60;
+                    if (data[5] == 'E') {
+                        gpgga_ans.lon = lon;
+                    } else if (data[5] == 'West') {
+                        gpgga_ans.lon = lon * -1;
+                    }
+
+                    gpgga_ans.LocationIdentificationQuality = data[6];
+                    gpgga_ans.SatellitesCount = data[7];
+                    gpgga_ans.HorizontalAccuracyDropRate = data[8];
+                    gpgga_ans.AntennaSeaLevelHeight = data[9];
+                    gpgga_ans.AntennaSeaLevelHeightUnit = data[10];
+                    gpgga_ans.GeoidHeight = data[11];
+                    gpgga_ans.GeoidHeightUnit = data[12];
+
+                    if (data.length == 15) {
+                        gpgga_ans.DgpsElapsedTime = data[13];
+                        gpgga_ans.DifferentialReferencePointId = data[14].substr(0, 4);
+                    } else {
+                        console.log(data.length);
+                    }
+                    return gpgga_ans;
+                }
+
+                function downloadCSV() {
+                    if (typeof Object.keys(ans) === "undefined") {
+                        console.log("Please read file");
+                        return;
+                    }
+                    var content = 'id,timestamp,lon,lat,km_speed,elevation,SatellitesCount\r\n';
+                    var counter = 0;
+                    if (Object.keys(ans).length > 0) {
+
+                        for (key in ans) {
+
+                            var tmp = counter + ",";
+                            tmp += getSQLts(ans[key].gprmc.ts) + ",";
+                            tmp += ans[key].gprmc.lon + "," + ans[key].gprmc.lat + "," + ans[key].gprmc.km_speed + ",";
+                            tmp += ans[key].gpgga.AntennaSeaLevelHeight + "," + ans[key].gpgga.SatellitesCount + "\r\n";
+                            //console.log(tmp);
+                            content += tmp;
+                            counter++;
+                        }
+
+                        var blob = new Blob([content], {
+                            "type": "text/plain"
+                        });
+                        filename = now_filename + ".csv";
+                        document.getElementById("csv").download = filename;
+                        if (window.navigator.msSaveBlob) {
+                            window.navigator.msSaveBlob(blob, filename);
+                            // msSaveOrOpenBlobの場合はファイルを保存せずに開ける
+                            window.navigator.msSaveOrOpenBlob(blob, filename);
+                        } else {
+                            document.getElementById("csv").href = window.URL.createObjectURL(blob);
+                        }
+                    }
+                }
+
+                function downloadGPX() {
+                    if (typeof Object.keys(ans) === "undefined") {
+                        console.log("Please read file");
+                        return;
+                    }
+                    var content = '<?xml version="1.0" encoding="UTF-8"?>\r\n' +
+                        '<gpx xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.topografix.com/GPX/1/0" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">\r\n' +
+                        '<trk>\r\n' +
+                        '<number>1</number>\r\n' +
+                        '<trkseg>\r\n';
+
+                    if (Object.keys(ans).length > 0) {
+
+                        for (key in ans) {
+                            if (typeof ans[key].gprmc.ts != "undefined") {
+                                time = getISOts(ans[key].gprmc.ts);
+                                lon = ans[key].gprmc.lon;
+                                lat = ans[key].gprmc.lat;
+                                kmspeed = ans[key].gprmc.km_speed;
+                                ele = ans[key].gpgga.AntennaSeaLevelHeight;
+                                //console.log(tmp);
+                                content += '<trkpt lat="' + lat + '" lon="' + lon + '"><ele>' + ele + '</ele><time>' + time + '</time></trkpt>\r\n';
+                            }
+                        }
+                        content += '</trkseg></trk></gpx>';
+
+                        var blob = new Blob([content], {
+                            "type": "text/plain"
+                        });
+
+                        filename = now_filename + ".gpx";
+                        document.getElementById("gpx").download = filename;
+                        if (window.navigator.msSaveBlob) {
+                            window.navigator.msSaveBlob(blob, filename);
+                            // msSaveOrOpenBlobの場合はファイルを保存せずに開ける
+                            window.navigator.msSaveOrOpenBlob(blob, filename);
+                        } else {
+                            document.getElementById("gpx").href = window.URL.createObjectURL(blob);
+                        }
+                    }
+                }
+
+                function downloadKML() {
+                    var filename = now_filename + ".kml";
+                    if (typeof Object.keys(ans) === "undefined") {
+                        console.log("Please read file");
+                        return;
+                    }
+                    var content = '<?xml version="1.0" encoding="UTF-8"?>\r\n' +
+                        '<kml xmlns="http://earth.google.com/kml/2.2">\r\n' +
+                        '\t<Document>\r\n' +
+                        '\t\t<name>' + now_filename + '</name>\r\n' +
+                        '\t\t<Style id="s1">\r\n' +
+                        '\t\t\t<IconStyle>\r\n' +
+                        '\t\t\t\t<Icon>\r\n' +
+                        '\t\t\t\t\t<href>http://maps.google.com/mapfiles/kml/shapes/track.png</href>\r\n' +
+                        '\t\t\t\t</Icon>\r\n' +
+                        '\t\t\t\t<hotSpot x="32" y="1" xunits="pixels" yunits="pixels"/>\r\n' +
+                        '\t\t\t</IconStyle>\r\n' +
+                        '\t\t</Style>\r\n';
+
+                    if (Object.keys(ans).length > 0) {
+                        for (key in ans) {
+                            console.log(key);
+                            if (ans[key].gprmc.ts && key) {
+                                time = getISOts(ans[key].gprmc.ts);
+                                lon = ans[key].gprmc.lon;
+                                lat = ans[key].gprmc.lat;
+                                kmspeed = ans[key].gprmc.km_speed;
+                                ele = ans[key].gpgga.AntennaSeaLevelHeight;
+                                content += '<Placemark>\r\n' +
+                                    '\t<TimeStamp>\r\n' +
+                                    '\t\t<when>' + time + '</when>\r\n' +
+                                    '\t</TimeStamp>\r\n' +
+                                    '\t<styleUrl>#s1</styleUrl>\r\n' +
+                                    '\t<Point>\r\n' +
+                                    '\t\t<coordinates>' + lon + ',' + lat + ',' + ele + '</coordinates>\r\n' +
+                                    '\t</Point>\r\n' +
+                                    '</Placemark>';
+                            }
+                        }
+                        content += '\t</Document>\r\n</kml>';
+
+                        var blob = new Blob([content], {
+                            "type": "text/plain"
+                        });
+
+                        document.getElementById("kml").download = filename;
+                        if (window.navigator.msSaveBlob) {
+                            window.navigator.msSaveBlob(blob, filename);
+                            // msSaveOrOpenBlobの場合はファイルを保存せずに開ける
+                            window.navigator.msSaveOrOpenBlob(blob, filename);
+                        } else {
+                            document.getElementById("kml").href = window.URL.createObjectURL(blob);
+                        }
+                    }
+                }
+
+                function getSQLts(date) {
+                    return date.getFullYear() + '-' + ('0' + (date.getMonth() + 1)).slice(-2) + '-' + ('0' + date.getDate()).slice(-2) +
+                        ' ' + ('0' + date.getHours()).slice(-2) + ':' + ('0' + date.getMinutes()).slice(-2) + ':' + ('0' + date.getSeconds()).slice(-2);
+                }
+
+                function getISOts(date) {
+                    return date.getFullYear() + '-' + ('0' + (date.getMonth() + 1)).slice(-2) + '-' + ('0' + date.getDate()).slice(-2) +
+                        'T' + ('0' + date.getHours()).slice(-2) + ':' + ('0' + date.getMinutes()).slice(-2) + ':' + ('0' + date.getSeconds()).slice(-2) + 'Z';
+
+                }
+            </script>
+
+</body>
+
+</html>

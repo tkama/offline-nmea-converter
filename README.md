@@ -1,37 +1,18 @@
-## Welcome to GitHub Pages
+## Welcome to Offline NMEA Converter
+ドライブレコーダーが保存したNMEA形式のファイルをGPX、KML、CSVに変換します。HTML5の技術を活用し、サーバにデータを送信せずに動作します。
 
-You can use the [editor on GitHub](https://github.com/tkama/offline-nmea-conveter/edit/master/README.md) to maintain and preview the content for your website in Markdown files.
+Convert the NMEA format file saved by the drive recorder to GPX, KML, CSV. Using HTML 5 technology, it works without sending information to the server.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+## How to Use.
+使い方
 
-### Markdown
+### STEP1： Move to top page.
+下記のURLにアクセスします。
+https://tkama.github.io/offline-nmea-converter/index.html
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+### STEP2： Drag and drop NEMA file.
+NMEAファイルをドラッグ ＆ ドロップします。
 
-```markdown
-Syntax highlighted code block
+### STEP3： Select the type of file to download.
+ダウンロードしたいファイルのを選択します。
 
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
-```
-
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/tkama/offline-nmea-conveter/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.

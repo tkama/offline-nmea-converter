@@ -10,9 +10,11 @@ Convert the NMEA format file saved by the drive recorder to GPX, KML, CSV. Using
 下記のURLにアクセスします。
 https://tkama.github.io/offline-nmea-converter/index.html
 
-### STEP2： Drag and drop NEMA file.
+### STEP2： Drag and drop NMEA file.
 NMEAファイルをドラッグ ＆ ドロップします。
 
 ### STEP3： Select the type of file to download.
 ダウンロードしたいファイルのを選択します。
 
+<br />
+<img src="https://tkama.github.io/offline-nmea-converter/img/howto.png" height="400px">

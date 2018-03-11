@@ -17,4 +17,4 @@ NMEAファイルをドラッグ ＆ ドロップします。
 ダウンロードしたいファイルのを選択します。
 
 <br />
-<img src="https://tkama.github.io/offline-nmea-converter/img/howto.png" height="400px">
+<img src="https://tkama.github.io/offline-nmea-converter/img/howto.png" height="320px">
